@@ -8,7 +8,7 @@
             "type": "shell",
             "command": "g++",
             "args": [
-                "-g", "-Og", "main.cpp"
+                "-g", "-Og", "main.cpp", "orientationCalculations.cpp"
             ],
             "group": {
                 "kind": "build",
