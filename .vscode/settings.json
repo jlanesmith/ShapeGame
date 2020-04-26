@@ -2,5 +2,8 @@
     "C_Cpp.default.browse.path": [
         "${workspaceRoot}",
         "C:\\MinGW\\lib\\gcc\\mingw32\\9.2.0\\include\\c++"
-    ]
+    ],
+    "files.associations": {
+        "iostream": "cpp"
+    }
 }
