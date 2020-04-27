@@ -1,6 +1,5 @@
 # ShapeGame
-This project calculates all possible solutions for a shape-fitting game while using carefully written algorithms to avoid brute force.
-
+This program calculates all 2339 possible solutions for a shape-fitting game while using various optimizations to shorten runtime.
 
 The game looks like this:
 
