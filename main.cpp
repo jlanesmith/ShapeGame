@@ -1,14 +1,21 @@
+// 2339 Solutions
+
 #include <iomanip>
 #include <cstring>
+#include <fstream>
+#include <time.h>
 #include "orientationCalculations.h"
 
 using namespace std;
 
-const int height = 6, width = 10;
+const int height = 5, width = 8;
 int grid[height][width] = {0};
+int testGrid[height][width]; // For isSolution() and isBadAlgorithm()
 
 set<string> solutionCodes;
 int numSolutions = 0;
+
+ofstream myFile("solutions.txt");
 
 // Each real solution will have four "solutions", since it can be flipped horiztonally and vertically
 // Codes are a simplified version of the board
@@ -33,30 +40,29 @@ string generateCode(int someGrid[height][width]) {
 bool isSolution() {
 
 	string codes[4];
-	int someGrid[height][width];
-	memcpy(someGrid, grid, height*width*sizeof(int));
+	memcpy(testGrid, grid, height*width*sizeof(int));
 
 	for (int k = 0; k < 2; k++) {
 
 		// Flip horizontally
 		for (int i = 0; i < height; i++) {
 			for (int j = 0; j < width/2; j++) {
-				int temp = someGrid[i][j];
-				someGrid[i][j] = someGrid[i][width-j-1];
-				someGrid[i][width-j-1] = temp;
+				int temp = testGrid[i][j];
+				testGrid[i][j] = testGrid[i][width-j-1];
+				testGrid[i][width-j-1] = temp;
 			}	
 		}
-		codes[2*k] = generateCode(someGrid);
+		codes[2*k] = generateCode(testGrid);
 
 		// Flip horizontally
 		for (int i = 0; i < height/2; i++) {
 			for (int j = 0; j < width; j++) {
-				int temp = someGrid[i][j];
-				someGrid[i][j] = someGrid[height-i-1][j];
-				someGrid[height-i-1][j] = temp;
+				int temp = testGrid[i][j];
+				testGrid[i][j] = testGrid[height-i-1][j];
+				testGrid[height-i-1][j] = temp;
 			}	
 		}
-		codes[2*k+1] = generateCode(someGrid);
+		codes[2*k+1] = generateCode(testGrid);
 	}
 
 	// See if any version of the current solution has already been found
@@ -67,27 +73,30 @@ bool isSolution() {
 
 	// This is a new solution, so add it to the set of new solutions
 	solutionCodes.insert(codes[3]);
+	numSolutions++;
 	return true;
 }
 
-void printBoard() {
+void printSolution(ostream& out) {
+	out << "Solution " << numSolutions << endl;
 	for (int i = 0; i < width; i++)
-		cout << " _"; // Print top
-	cout << endl;
+		out << " _"; // Print top
+	out << endl;
 	for (int i = 0; i < height; i++) {
-		cout << "|";
+		out << "|";
 		for (int j = 0; j < width; j++) {
 			if ((i == height-1) || (grid[i][j] != grid[i+1][j]))
-				cout << "_";
+				out << "_";
 			else
-				cout << " ";
+				out << " ";
 			if ((j == width-1) || (grid[i][j] != grid[i][j+1]))
-				cout << "|";
+				out << "|";
 			else
-				cout << " ";
+				out << " ";
 		}
-		cout << endl;
-	}	
+		out << endl;
+	}
+	out << endl;
 }
 
 void printGrid() {
@@ -99,31 +108,31 @@ void printGrid() {
 	}
 }
 
-
-// Checks if the shape will fit in the grid and the position
-// Returns how much the shape is shifted to the left (-1 if it doesn't fit)
-int checkFit(vector<vector<int>> shape, int x, int y) {
-	int shiftFactor = 0;
-	while (shape[0][shiftFactor] == 0)
-		shiftFactor++;
-	for (int i = 0; i < shape.size(); i++) {
-		for (int j = 0; j < shape[0].size(); j++) {
-			if (x+i < 0 || x+i >= height || y+j-shiftFactor < 0 || y+j-shiftFactor >= width)
-				return -1;			
-			if (grid[x+i][y+j-shiftFactor] >= 1 && shape[i][j] == 1)
-				return -1;
-		}
-	}
-	return shiftFactor;
+int recurseEmpty(int x, int y) {
+	if (x<0 || x>=height || y<0 || y>=width || testGrid[x][y] != 0)
+		return 0;
+	testGrid[x][y] = 1;
+	return 1 + recurseEmpty(x+1,y) + recurseEmpty(x-1,y) + recurseEmpty(x,y+1) + recurseEmpty(x,y-1);
 }
 
-void addShapeToGrid(vector<vector<int>> shape, int x, int y, int shapeIndex) {
-	for (int i = 0; i < shape.size(); i++) {
-		for (int j = 0; j < shape[0].size(); j++) {
-			if (shape[i][j] == 1)
-				grid[x+i][y+j] = shapeIndex;
+// Additional optimization, determing if the areas of remaining space are multiples of 5
+bool isBadAlgorithm(int numRemShapes) {
+
+	memcpy(testGrid, grid, height*width*sizeof(int));
+
+	int numEmpty = 0;
+	for (int i = 0; i < height; i++) {
+		for (int j = 0; j < width; j++) {
+			if (testGrid[i][j] == 0) {
+				numEmpty = recurseEmpty(i,j);
+				if (numEmpty % 5 != 0) // If the empty space isn't divisible by 5, it's impossible for shapes to fit in it
+					return true;
+				if (numEmpty == numRemShapes*5) // If the empty space is all of the empty space, there's no more empty space
+					return false;
+			}
 		}
 	}
+	return false;
 }
 
 void removeShapeFromGrid(vector<vector<int>> shape, int x, int y) {
@@ -135,12 +144,45 @@ void removeShapeFromGrid(vector<vector<int>> shape, int x, int y) {
 	}
 }
 
+// Checks if the shape will fit in the grid and the position
+// Returns how much the shape is shifted to the left (-1 if it doesn't fit)
+int checkFitAddShape(vector<vector<int>> shape, int x, int y, int numRemShapes) {
+	int shiftFactor = 0;
+	while (shape[0][shiftFactor] == 0)
+		shiftFactor++;
+	for (int i = 0; i < shape.size(); i++) {
+		for (int j = 0; j < shape[0].size(); j++) {
+			if (x+i < 0 || x+i >= height || y+j-shiftFactor < 0 || y+j-shiftFactor >= width)
+				return -1;			
+			if (grid[x+i][y+j-shiftFactor] >= 1 && shape[i][j] == 1)
+				return -1;
+		}
+	}
+
+	// Add shape
+	y -= shiftFactor;
+	int shapeIndex = allShapes.size()+1-numRemShapes;
+	for (int i = 0; i < shape.size(); i++) {
+		for (int j = 0; j < shape[0].size(); j++) {
+			if (shape[i][j] == 1)
+				grid[x+i][y+j] = shapeIndex;
+		}
+	}
+
+	if (isBadAlgorithm(numRemShapes)) { // 
+		removeShapeFromGrid(shape, x, y);
+		return -1;
+	}
+	
+	return shiftFactor;
+}
+
 void addShape(int pos, set<set<vector<vector<int>>>> remainingShapes) {
 
 	if (remainingShapes.size() == 0) { // If all shapes added
 		if (isSolution()) {
-			cout << "Success! Solution " << ++numSolutions << endl;
-			printBoard();
+			printSolution(cout);
+			printSolution(myFile);
 		}
 		return;
 	}
@@ -153,9 +195,8 @@ void addShape(int pos, set<set<vector<vector<int>>>> remainingShapes) {
 
 	for (auto shapeOrientations: remainingShapes) { // For each available shape
 		for (auto shape : shapeOrientations) { // For each orientation
-			int shiftFactor = checkFit(shape, x, y);
+			int shiftFactor = checkFitAddShape(shape, x, y, remainingShapes.size());
 			if (shiftFactor >= 0) {
-				addShapeToGrid(shape, x, y-shiftFactor, allShapes.size()+1-remainingShapes.size());
 				set<set<vector<vector<int>>>> nextRemainingShapes = remainingShapes;
 				nextRemainingShapes.erase(shapeOrientations);
 				addShape(pos+1, nextRemainingShapes);
@@ -167,9 +208,23 @@ void addShape(int pos, set<set<vector<vector<int>>>> remainingShapes) {
 
 int main() 
 {
+
+	if (myFile.is_open())
+		cout << "File open successfully" << endl;
+	else {
+		cout << "File unable to open, aborting..." << endl;
+		return 0;
+	}
+
 	calculateShapeOrientations();
-	addShape(0, allShapes);
-	
-    cout << "Complete!" << endl;
+	clock_t start = clock();
+	addShape(0, allShapes);	
+	clock_t end = clock();
+
+    cout << "Total solutions: " << numSolutions << endl;
+	myFile << "Total solutions: " << numSolutions << endl;
+	cout << "Calculation time (ms): " << (end-start)/(CLOCKS_PER_SEC/1000) << endl; 
+	myFile << "Calculation time (s): " << (end-start)/(CLOCKS_PER_SEC) << endl;
+	myFile.close();
     return 0;
 }
