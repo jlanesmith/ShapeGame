@@ -7,7 +7,7 @@
 
 using namespace std;
 
-const vector<vector<vector<int>>> shapes {
+const set<vector<vector<int>>> shapes {
 	{{1,1,1,1,1}}, // 2 orientations
 	{{1,1,1,1}, {1,0,0,0}}, // 8 orientations
 	{{1,1,1,1}, {0,1,0,0}}, // 8 orientations
@@ -22,7 +22,7 @@ const vector<vector<vector<int>>> shapes {
 	{{0,1,1}, {0,1,0}, {1,1,0}}
 };
 
-extern vector<set<vector<vector<int>>>> allOrientations;
+extern set<set<vector<vector<int>>>> allShapes;
 
 vector<vector<int>> rotateShape (vector<vector<int>> origShape);
 vector<vector<int>> flipShape (vector<vector<int>> shape);
