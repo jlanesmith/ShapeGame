@@ -8,9 +8,10 @@
 
 using namespace std;
 
-const int height = 5, width = 8;
+const int height = 6, width = 10;
 int grid[height][width] = {0};
 int testGrid[height][width]; // For isSolution() and isBadAlgorithm()
+set<set<vector<vector<int>>>> shapesUsedInCorner;
 
 set<string> solutionCodes;
 int numSolutions = 0;
@@ -108,6 +109,7 @@ void printGrid() {
 	}
 }
 
+// Recursive function, used to find amount of connected empty space for isSpaceNotMultipleOfFive()
 int recurseEmpty(int x, int y) {
 	if (x<0 || x>=height || y<0 || y>=width || testGrid[x][y] != 0)
 		return 0;
@@ -115,8 +117,8 @@ int recurseEmpty(int x, int y) {
 	return 1 + recurseEmpty(x+1,y) + recurseEmpty(x-1,y) + recurseEmpty(x,y+1) + recurseEmpty(x,y-1);
 }
 
-// Additional optimization, determing if the areas of remaining space are multiples of 5
-bool isBadAlgorithm(int numRemShapes) {
+// Additional optimization, determing if the areas of remaining space are multiples of 5 or not
+bool isSpaceNotMultipleOfFive(int numRemShapes) {
 
 	memcpy(testGrid, grid, height*width*sizeof(int));
 
@@ -144,18 +146,26 @@ void removeShapeFromGrid(vector<vector<int>> shape, int x, int y) {
 	}
 }
 
+bool isCorner(int x, int y) {
+	return ((x==0 || x==height-1) && (y==0 || y==width-1));
+}
+
 // Checks if the shape will fit in the grid and the position
 // Returns how much the shape is shifted to the left (-1 if it doesn't fit)
-int checkFitAddShape(vector<vector<int>> shape, int x, int y, int numRemShapes) {
+int checkFitAddShape(vector<vector<int>> shape, int x, int y, int numRemShapes, bool alreadyUsed) {
 	int shiftFactor = 0;
 	while (shape[0][shiftFactor] == 0)
 		shiftFactor++;
 	for (int i = 0; i < shape.size(); i++) {
 		for (int j = 0; j < shape[0].size(); j++) {
-			if (x+i < 0 || x+i >= height || y+j-shiftFactor < 0 || y+j-shiftFactor >= width)
+			if (x+i < 0 || x+i >= height || y+j-shiftFactor < 0 || y+j-shiftFactor >= width) // If it's out of bounds
 				return -1;			
-			if (grid[x+i][y+j-shiftFactor] >= 1 && shape[i][j] == 1)
+			if (grid[x+i][y+j-shiftFactor] >= 1 && shape[i][j] == 1) // If a shape is already there
 				return -1;
+			// If the shape has already been used in the initial corner, all solutions with it in any corner have been found
+			if (shape[i][j] == 1 && alreadyUsed && isCorner(x+i, y+j-shiftFactor)) {// Additional optimization
+				return -1;
+			}
 		}
 	}
 
@@ -169,7 +179,7 @@ int checkFitAddShape(vector<vector<int>> shape, int x, int y, int numRemShapes) 
 		}
 	}
 
-	if (isBadAlgorithm(numRemShapes)) { // 
+	if (isSpaceNotMultipleOfFive(numRemShapes)) { // Additional optimization 
 		removeShapeFromGrid(shape, x, y);
 		return -1;
 	}
@@ -194,14 +204,21 @@ void addShape(int pos, set<set<vector<vector<int>>>> remainingShapes) {
 	int y = pos%width;
 
 	for (auto shapeOrientations: remainingShapes) { // For each available shape
+		// Check if shape has been used in corner already
+		bool alreadyUsed = (shapesUsedInCorner.find(shapeOrientations) != shapesUsedInCorner.end());
 		for (auto shape : shapeOrientations) { // For each orientation
-			int shiftFactor = checkFitAddShape(shape, x, y, remainingShapes.size());
+			int shiftFactor = checkFitAddShape(shape, x, y, remainingShapes.size(), alreadyUsed);
 			if (shiftFactor >= 0) {
 				set<set<vector<vector<int>>>> nextRemainingShapes = remainingShapes;
 				nextRemainingShapes.erase(shapeOrientations);
 				addShape(pos+1, nextRemainingShapes);
 				removeShapeFromGrid(shape, x, y-shiftFactor);
 			}
+		}
+		if (pos == 0) { // Additional optimization, if in initial corner
+			shapesUsedInCorner.insert(shapeOrientations);
+			if (allShapes.size() - shapesUsedInCorner.size() < 4)
+				return; // All other solutions will have been found by now
 		}
 	}
 }
