@@ -10,10 +10,10 @@ using namespace std;
 
 const int height = 6, width = 10;
 int grid[height][width] = {0};
-int testGrid[height][width]; // For isSolution() and isBadAlgorithm()
-set<set<vector<vector<int>>>> shapesUsedInCorner;
+int testGrid[height][width]; // For isSolution() and isSpaceNotMultipleOfFive()
+set<set<vector<vector<int>>>> shapesUsedInCorner; // Shapes used in initial corner
 
-set<string> solutionCodes;
+set<string> solutionCodes; // Set of solutions found so far
 int numSolutions = 0;
 
 ofstream myFile("solutions.txt");
@@ -100,6 +100,7 @@ void printSolution(ostream& out) {
 	out << endl;
 }
 
+// Used for debugging
 void printGrid() {
 	for (int i = 0; i < height; i++) {
 		for (int j = 0; j < width; j++) {
@@ -117,7 +118,7 @@ int recurseEmpty(int x, int y) {
 	return 1 + recurseEmpty(x+1,y) + recurseEmpty(x-1,y) + recurseEmpty(x,y+1) + recurseEmpty(x,y-1);
 }
 
-// Additional optimization, determing if the areas of remaining space are multiples of 5 or not
+// Additional optimization, to determine if the areas of remaining space are multiples of 5 or not
 bool isSpaceNotMultipleOfFive(int numRemShapes) {
 
 	memcpy(testGrid, grid, height*width*sizeof(int));
@@ -137,6 +138,7 @@ bool isSpaceNotMultipleOfFive(int numRemShapes) {
 	return false;
 }
 
+// Remove shape from grid --> x,y is top left corner of shape
 void removeShapeFromGrid(vector<vector<int>> shape, int x, int y) {
 	for (int i = 0; i < shape.size(); i++) {
 		for (int j = 0; j < shape[0].size(); j++) {
@@ -146,6 +148,7 @@ void removeShapeFromGrid(vector<vector<int>> shape, int x, int y) {
 	}
 }
 
+// Returns whether the point is in a corner of the grid
 bool isCorner(int x, int y) {
 	return ((x==0 || x==height-1) && (y==0 || y==width-1));
 }
@@ -197,7 +200,7 @@ void addShape(int pos, set<set<vector<vector<int>>>> remainingShapes) {
 		return;
 	}
 
-	while (grid[pos/width][pos%width] >= 1)
+	while (grid[pos/width][pos%width] >= 1) // Move to next empty spot in grid
 		pos++;
 
 	int x = pos/width;
